@@ -105,41 +105,35 @@ class TableAgent(Agent):
         self.evaluation.update_learning_rate()
 
     def get_size_and_hash(self, space):
+        int_id = np.vectorize(lambda x: int(x))
 
-        int_id = lambda x: int(x)
-        
         if isinstance(space, spaces.Discrete):
-            return space.n, int_id, int_id
+            return int_id, int_id
         
         elif isinstance(space, spaces.MultiDiscrete):
-            base_mat = np.ones_like(space.nvec, dtype=np.uint32)
-            rank = base_mat.ndim
-            p = 1
+            rank = space.nvec.ndim
             if rank == 0:
-                return space.nvec, int_id, int_id
-            elif rank == 1:
-                for i in range(len(base_mat)):
-                    base_mat[i] = p
-                    p *= space.nvec[i]
-            elif rank == 2:
-                for i in range(base_mat.shape[0]): # pylint:disable=E1136
-                    for j in range(base_mat.shape[1]): # pylint:disable=E1136
-                        base_mat[i, j] = p
-                        p *= int(space.nvec[i, j])
+                return int_id, int_id
             else:
-                raise ValueError(f'Arrays of rank {rank} are not supported yet ... open an issue if needed')
+                flat_vec = space.nvec.flatten()
+                base_mat = np.ones_like(flat_vec, dtype=np.uint32)
+                p = 1
+                for i in range(len(flat_vec)):
+                    print(p)
+                    base_mat[i] = p
+                    p *= int(flat_vec[i])
             
             def hash_multidiscrete(space_sample, base_mat=base_mat):
-                return np.sum(space_sample*base_mat)
+                flatten_sample = space_sample.flatten()
+                return np.sum(flatten_sample*base_mat)
             
-            def invert_hash_multidiscrete(hashed_space_sample, base_mat=base_mat):
-                flat_mat = base_mat.flatten()
-                space_sample = np.zeros_like(flat_mat)
-                for i in range(len(space_sample))[::-1]:
-                    space_sample[i] = hashed_space_sample // flat_mat[i]
-                    hashed_space_sample -= space_sample[i] * flat_mat[i]
-                return space_sample.reshape(base_mat.shape)
-
+            def invert_hash_multidiscrete(hashed_space_sample, base_mat=base_mat, sample_shape=space.nvec.shape):
+                flat_sample = np.zeros_like(base_mat)
+                for i in range(len(flat_sample))[::-1]:
+                    flat_sample[i] = hashed_space_sample // base_mat[i]
+                    hashed_space_sample -= flat_sample[i] * base_mat[i]
+                return flat_sample.reshape(sample_shape)
+            
             return np.prod(space.nvec), hash_multidiscrete, invert_hash_multidiscrete
         else:
             raise TypeError(f'Agent {self.name} cannot handle the space of type {type(space)}')
