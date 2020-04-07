@@ -1,10 +1,11 @@
 from gym import Env, spaces
 from time import time
 import numpy as np
+from copy import copy
 
 class MinesweeperEnv(Env):
 
-    def __init__(self, grid_shape=(3, 5), bombs_density=0.2, n_bombs=None, impact_size=3, max_time=999):
+    def __init__(self, grid_shape=(2, 2), bombs_density=0.2, n_bombs=None, impact_size=3, max_time=999):
         self.grid_shape = grid_shape
         self.grid_size = np.prod(grid_shape)
         self.n_bombs = int(bombs_density * self.grid_size) if n_bombs is None else n_bombs
@@ -17,10 +18,7 @@ class MinesweeperEnv(Env):
         self.impact_size = impact_size
 
         # Setting up gym Env conventions
-        hidden_part = np.ones(self.grid_shape) + self.impact_size ** 2
-        visible_part = 3 * np.ones(self.grid_shape)
-
-        nvec_observation = np.stack((hidden_part, visible_part), axis=-1)
+        nvec_observation = (self.impact_size ** 2 + 2) * np.ones(self.grid_shape)
         self.observation_space = spaces.MultiDiscrete(nvec_observation)
 
         nvec_action = np.array(self.grid_shape + (2,))
@@ -52,7 +50,20 @@ class MinesweeperEnv(Env):
 
         ## Place bombs
         self.state[self.bombs_positions + (0,)] = self.impact_size ** 2
-        self.start_time = time()      
+        self.start_time = time()
+
+    def get_observation(self):
+        observation = copy(self.state[:, :, 1]) + self.impact_size ** 2 + 1
+
+        revealed = observation == 1
+        observation[revealed] = copy(self.state[:, :, 0][revealed])
+
+        flaged = observation == 2
+        observation[flaged] -= 1
+
+    def reveal_around(self, coords):
+        print('reveal')
+        pass
 
     def step(self, action):
         coords = action[:2]
@@ -73,7 +84,7 @@ class MinesweeperEnv(Env):
             score = -(self.n_bombs - self.flaged_bombs + self.flaged_empty)/self.n_bombs
             reward, done = score, True
             print('You took too much time, the bombs have exploded !')
-            return self.state, reward, done, {'passed':False}
+            return self.get_observation(), reward, done, {'passed':False}
         
         if action_type == REVEAL:
             if case_state == UNSEEN:
@@ -85,6 +96,7 @@ class MinesweeperEnv(Env):
                 reward = -0.01
             else:
                 reward = -0.001
+                return self.get_observation(), reward, done, {'passed':True}
             
             self.state[coords + (1,)] = action_type
 
@@ -105,11 +117,7 @@ class MinesweeperEnv(Env):
             print('A winner is you !')
             reward, done = 1, True
 
-        return self.state, reward, done, {'passed':False}
-            
-    def reveal_around(self, coords):
-        print('reveal')
-        pass
+        return self.get_observation(), reward, done, {'passed':False}
 
 if __name__ == "__main__":
     env = MinesweeperEnv()
