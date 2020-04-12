@@ -238,6 +238,7 @@ class Playground():
                     for key, value in zip(prev, [observation, action, reward, done, info]):
                         prev[key] = value
                     if done:
+                        if render: self.env.render()
                         agent.remember(prev['observation'], prev['action'], prev['reward'], prev['done'], observation, prev['info'])
                         agent.learn()
 
@@ -249,8 +250,7 @@ class Playground():
                 steps += step
                 avg_gain += gain
                 if episode%print_cycle==0: 
-                    print(f"Episode {episode}/{episodes}    \t gain({print_cycle}):{avg_gain/print_cycle} \t"
-                          f"explorations:{np.array([agent.control.exploration for agent in self.agents])}\t"
+                    print(f"Episode {episode}/{episodes}    \t gain:{avg_gain/print_cycle} \t"
                           f"steps/s:{steps/(time()-t0):.0f}, episodes/s:{print_cycle/(time()-t0):.0f}")
                     avg_gain = np.zeros_like(self.agents)
                     steps = 0
