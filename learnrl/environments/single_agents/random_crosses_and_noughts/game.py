@@ -125,6 +125,10 @@ class CrossesAndNoughtsGame():
             self.initPygame()
             self.isPygameInit = True
 
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT: # pylint: disable=E1101
+                pygame.quit() # pylint: disable=E1101  
+
         self.window.fill((0, 0, 0))
         nextActionsState = self.getNextActionsState(self.grid)
         states_micro_ids = {next_state:i for (i, next_state) in enumerate(self.getNextActionsState(self.grid))}
