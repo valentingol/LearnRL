@@ -132,8 +132,14 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Logs
+# ROMS
+/ROMs
+
+# Tensorboard
 logs
 
-# Roms
-roms
+# Main
+main.py
+
+# cProfile stats
+stats*
